@@ -53,6 +53,26 @@
                 </select>
             </div>
 
+            <!-- Sorting Bar -->
+            <div class="sorting-bar">
+                <div class="sort-group">
+                    <label for="sortByPay">按报酬排序：</label>
+                    <select id="sortByPay" class="sort-select">
+                        <option value="">默认</option>
+                        <option value="high">高到低</option>
+                        <option value="low">低到高</option>
+                    </select>
+                </div>
+                <div class="sort-group">
+                    <label for="sortByDuration">按周期排序：</label>
+                    <select id="sortByDuration" class="sort-select">
+                        <option value="">默认</option>
+                        <option value="short">短到长</option>
+                        <option value="long">长到短</option>
+                    </select>
+                </div>
+            </div>
+
             <!-- Project Cards Grid -->
             <div id="projectsGrid" class="projects-grid">
                 <!-- Projects will be dynamically inserted here by JavaScript -->
