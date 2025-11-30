@@ -867,8 +867,241 @@ const mockResumeData = {
     ]
 };
 
-// Resume upload and auto-fill
-resumeUpload.addEventListener('change', (e) => {
+// ========================================
+// PDF Parsing Functions
+// ========================================
+
+// Extract text from PDF file
+async function extractTextFromPDF(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        fullText += pageText + '\n';
+    }
+
+    return fullText;
+}
+
+// Parse contact information
+function parseContactInfo(text) {
+    const info = {};
+
+    // Extract email
+    const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/gi;
+    const emails = text.match(emailRegex);
+    info.email = emails ? emails[0] : '';
+
+    // Extract phone (supports multiple formats)
+    const phoneRegex = /(?:\+?86)?[-\s]?1[3-9]\d[-\s]?\d{4}[-\s]?\d{4}|(?:\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4})/g;
+    const phones = text.match(phoneRegex);
+    info.phone = phones ? phones[0].replace(/\s+/g, '-') : '';
+
+    // Extract name (usually first line or near top)
+    const lines = text.split('\n').filter(line => line.trim().length > 0);
+    // Look for a name-like line (2-4 Chinese characters or 2-4 capitalized words)
+    for (let line of lines.slice(0, 5)) {
+        const trimmed = line.trim();
+        // Chinese name pattern
+        if (/^[\u4e00-\u9fa5]{2,4}$/.test(trimmed)) {
+            info.name = trimmed;
+            break;
+        }
+        // English name pattern
+        if (/^[A-Z][a-z]+(\s[A-Z][a-z]+){1,3}$/.test(trimmed)) {
+            info.name = trimmed;
+            break;
+        }
+    }
+
+    // Extract city/location
+    const cityRegex = /(?:北京|上海|广州|深圳|杭州|成都|武汉|西安|南京|重庆|天津|苏州|郑州|长沙|东莞|沈阳|青岛|合肥|佛山)/g;
+    const cities = text.match(cityRegex);
+    info.city = cities ? cities[0] : '';
+
+    return info;
+}
+
+// Parse education section
+function parseEducation(text) {
+    const education = [];
+
+    // Common university names (Chinese and international)
+    const universities = [
+        '清华大学', '北京大学', '复旦大学', '上海交通大学', '浙江大学', '中国科学技术大学',
+        '南京大学', '哈尔滨工业大学', '西安交通大学', '中山大学', '武汉大学', '同济大学',
+        '北京航空航天大学', '华中科技大学', '东南大学', '天津大学', '南开大学', '厦门大学',
+        'Stanford', 'MIT', 'Harvard', 'Berkeley', 'Cambridge', 'Oxford', 'Princeton',
+        'Yale', 'Columbia', 'Cornell', 'Carnegie Mellon', 'University'
+    ];
+
+    // Find education section
+    const eduSectionRegex = /(?:教育背景|教育经历|EDUCATION|Education)[\s\S]*?(?=工作经历|工作经验|EXPERIENCE|Experience|项目经历|技能|$)/i;
+    const eduSection = text.match(eduSectionRegex);
+    const eduText = eduSection ? eduSection[0] : text;
+
+    // Extract GPA patterns
+    const gpaRegex = /GPA[:\s]*(\d\.\d+(?:\/\d\.\d+)?)/gi;
+    const gpas = [];
+    let gpaMatch;
+    while ((gpaMatch = gpaRegex.exec(eduText)) !== null) {
+        gpas.push(gpaMatch[1]);
+    }
+
+    // Extract year ranges
+    const yearRegex = /(\d{4})\s*[-~至]\s*(\d{4}|至今|Present|现在)/gi;
+    const yearRanges = [];
+    let yearMatch;
+    while ((yearMatch = yearRegex.exec(eduText)) !== null) {
+        yearRanges.push({
+            start: yearMatch[1],
+            end: yearMatch[2].replace(/至今|Present|现在/gi, '至今')
+        });
+    }
+
+    // Find university mentions
+    universities.forEach(uni => {
+        const regex = new RegExp(uni, 'gi');
+        if (regex.test(eduText)) {
+            const entry = {
+                school: uni,
+                degree: '',
+                level: '',
+                gpa: '',
+                startYear: '',
+                endYear: ''
+            };
+
+            // Try to find degree level
+            const degreeRegex = new RegExp(`${uni}[\\s\\S]{0,100}?(本科|学士|Bachelor|硕士|Master|博士|PhD|Doctor)`, 'i');
+            const degreeMatch = eduText.match(degreeRegex);
+            if (degreeMatch) {
+                const level = degreeMatch[1];
+                if (/本科|学士|Bachelor/i.test(level)) entry.level = '本科';
+                else if (/硕士|Master/i.test(level)) entry.level = '硕士';
+                else if (/博士|PhD|Doctor/i.test(level)) entry.level = '博士';
+            }
+
+            // Try to find major/degree
+            const majorRegex = new RegExp(`${uni}[\\s\\S]{0,150}?(计算机|软件|电子|通信|人工智能|数据|金融|经济|管理|法律|医学|生物|化学|物理|数学|机械|土木|建筑|Computer|Software|Engineering|Science|Business|Economics|Finance|Law|Medicine)`, 'i');
+            const majorMatch = eduText.match(majorRegex);
+            if (majorMatch) {
+                entry.degree = majorMatch[1];
+            }
+
+            // Assign GPA if available
+            if (gpas.length > education.length) {
+                entry.gpa = gpas[education.length];
+            }
+
+            // Assign year range if available
+            if (yearRanges.length > education.length) {
+                entry.startYear = yearRanges[education.length].start;
+                entry.endYear = yearRanges[education.length].end;
+            }
+
+            education.push(entry);
+        }
+    });
+
+    return education;
+}
+
+// Parse work experience section
+function parseExperience(text) {
+    const experience = [];
+
+    // Common company names
+    const companies = [
+        '腾讯', '阿里巴巴', '字节跳动', '百度', '华为', '小米', '京东', '美团', '滴滴',
+        '网易', '拼多多', '快手', '蚂蚁', '微软', 'Google', 'Amazon', 'Facebook', 'Meta',
+        'Apple', 'Netflix', 'Tesla', 'Uber', 'Airbnb', 'IBM', 'Oracle', 'Intel',
+        'NVIDIA', 'AMD', 'Salesforce', 'Adobe', 'Twitter', 'LinkedIn'
+    ];
+
+    // Find work experience section
+    const expSectionRegex = /(?:工作经历|工作经验|EXPERIENCE|Experience|Professional Experience)[\s\S]*?(?=教育背景|教育经历|EDUCATION|项目经历|技能|$)/i;
+    const expSection = text.match(expSectionRegex);
+    const expText = expSection ? expSection[0] : text;
+
+    // Extract year-month ranges for work
+    const dateRegex = /(\d{4})[年\-\/\.](\d{1,2})[月]?\s*[-~至]\s*(\d{4}[年\-\/\.]?\d{1,2}[月]?|至今|Present|现在)/gi;
+    const dateRanges = [];
+    let dateMatch;
+    while ((dateMatch = dateRegex.exec(expText)) !== null) {
+        const start = `${dateMatch[1]}年${dateMatch[2]}月`;
+        let end = dateMatch[3];
+        if (/至今|Present|现在/.test(end)) {
+            end = '至今';
+        } else {
+            end = end.replace(/(\d{4})[年\-\/\.]?(\d{1,2})[月]?/, '$1年$2月');
+        }
+        dateRanges.push({ start, end });
+    }
+
+    // Find company mentions
+    companies.forEach(company => {
+        const regex = new RegExp(company, 'gi');
+        if (regex.test(expText)) {
+            const entry = {
+                company: company,
+                position: '',
+                location: '',
+                startDate: '',
+                endDate: '',
+                responsibilities: []
+            };
+
+            // Try to find position/title near company name
+            const positionRegex = new RegExp(`${company}[\\s\\S]{0,100}?(工程师|开发|经理|总监|专家|架构师|主管|分析师|Engineer|Developer|Manager|Director|Analyst|Architect|Lead|Senior|Junior)`, 'i');
+            const positionMatch = expText.match(positionRegex);
+            if (positionMatch) {
+                entry.position = positionMatch[1];
+            }
+
+            // Try to find location
+            const locationRegex = new RegExp(`${company}[\\s\\S]{0,100}?(北京|上海|广州|深圳|杭州|成都|武汉|西安|南京)`, 'i');
+            const locationMatch = expText.match(locationRegex);
+            if (locationMatch) {
+                entry.location = locationMatch[1];
+            }
+
+            // Assign date range if available
+            if (dateRanges.length > experience.length) {
+                entry.startDate = dateRanges[experience.length].start;
+                entry.endDate = dateRanges[experience.length].end;
+            }
+
+            // Extract bullet points (responsibilities)
+            const bulletRegex = new RegExp(`${company}[\\s\\S]{0,500}`, 'i');
+            const companySection = expText.match(bulletRegex);
+            if (companySection) {
+                const bullets = companySection[0].match(/[•\-\*]\s*(.+)/g);
+                if (bullets) {
+                    entry.responsibilities = bullets.slice(0, 3).map(b =>
+                        b.replace(/^[•\-\*]\s*/, '').trim()
+                    );
+                }
+            }
+
+            // If no bullets found, add placeholder
+            if (entry.responsibilities.length === 0) {
+                entry.responsibilities = ['负责相关业务开发和维护'];
+            }
+
+            experience.push(entry);
+        }
+    });
+
+    return experience;
+}
+
+// Resume upload and auto-fill with actual PDF parsing
+resumeUpload.addEventListener('change', async (e) => {
     const files = e.target.files;
     if (files.length > 0) {
         const file = files[0];
@@ -877,16 +1110,58 @@ resumeUpload.addEventListener('change', (e) => {
         uploadedFiles.innerHTML = `
             <div class="file-item">
                 <span class="file-name">📄 ${file.name}</span>
-                <span class="file-badge">已上传</span>
+                <span class="file-badge">解析中...</span>
             </div>
         `;
 
-        // Simulate resume parsing with delay
-        setTimeout(() => {
-            autoFillProfile(mockResumeData);
+        try {
+            // Extract text from PDF
+            const text = await extractTextFromPDF(file);
+            console.log('Extracted text:', text); // For debugging
+
+            // Parse different sections
+            const contactInfo = parseContactInfo(text);
+            const education = parseEducation(text);
+            const experience = parseExperience(text);
+
+            // Combine parsed data
+            const parsedData = {
+                name: contactInfo.name || '',
+                email: contactInfo.email || '',
+                phone: contactInfo.phone || '',
+                city: contactInfo.city || '',
+                education: education.length > 0 ? education : [],
+                experience: experience.length > 0 ? experience : []
+            };
+
+            // Update upload status
+            uploadedFiles.innerHTML = `
+                <div class="file-item">
+                    <span class="file-name">📄 ${file.name}</span>
+                    <span class="file-badge">已解析</span>
+                </div>
+            `;
+
+            // Auto-fill the form
+            autoFillProfile(parsedData);
+
+            // Show success notice
             autoFillNotice.classList.remove('hidden');
             setTimeout(() => autoFillNotice.classList.add('hidden'), 5000);
-        }, 1000);
+
+            // Store parsed data for later use
+            Object.assign(mockResumeData, parsedData);
+
+        } catch (error) {
+            console.error('PDF parsing error:', error);
+            uploadedFiles.innerHTML = `
+                <div class="file-item">
+                    <span class="file-name">📄 ${file.name}</span>
+                    <span class="file-badge" style="background: #fee; color: #c00;">解析失败</span>
+                </div>
+            `;
+            alert('简历解析失败，请确保上传的是有效的PDF文件');
+        }
 
         resumeUpload.value = '';
     }
