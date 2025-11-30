@@ -83,113 +83,184 @@
         <section id="profile" class="view-section">
             <div class="section-header">
                 <h1>我的资料</h1>
-                <p class="subtitle">完善您的个人信息以获得更多项目机会</p>
+                <p class="subtitle">上传简历自动填充信息，完善您的个人资料</p>
             </div>
 
-            <div class="profile-container">
-                <!-- Left Column: Personal Info -->
-                <div class="profile-left">
-                    <div class="form-card">
-                        <h2>基本信息</h2>
+            <!-- Resume Upload Section - Top -->
+            <div class="upload-card">
+                <h2>📄 上传简历</h2>
+                <p class="upload-hint">上传PDF格式简历，系统将自动提取教育和工作经历信息</p>
+                <label for="resumeUpload" class="upload-label">
+                    <div class="upload-box-large">
+                        <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <span class="upload-text-large">点击或拖拽上传简历</span>
+                        <span class="upload-subtext">支持 PDF 格式，最大 10MB</span>
+                        <input type="file" id="resumeUpload" accept=".pdf,.doc,.docx" class="upload-input">
+                    </div>
+                </label>
+                <div id="uploadedFiles" class="uploaded-files-inline"></div>
+                <div id="autoFillNotice" class="auto-fill-notice hidden">
+                    ✓ 简历已解析！教育和工作经历已自动填充
+                </div>
+            </div>
 
-                        <div class="form-group">
-                            <label for="nameInput">姓名</label>
-                            <input type="text" id="nameInput" value="罗杰" class="form-input">
-                        </div>
+            <!-- Profile Sections Grid -->
+            <div class="profile-grid">
 
-                        <div class="form-group">
-                            <label for="emailInput">邮箱</label>
-                            <input type="email" id="emailInput" value="luojie@example.com" class="form-input">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="wechatInput">微信号</label>
-                            <input type="text" id="wechatInput" value="luojie_2024" class="form-input">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="cityInput">所在城市</label>
-                            <input type="text" id="cityInput" value="上海" class="form-input">
-                        </div>
-
-                        <div class="form-group">
-                            <label>领域标签</label>
-                            <div class="domain-chips">
-                                <label class="chip-label">
-                                    <input type="checkbox" value="法律" checked>
-                                    <span class="chip">法律</span>
-                                </label>
-                                <label class="chip-label">
-                                    <input type="checkbox" value="金融" checked>
-                                    <span class="chip">金融</span>
-                                </label>
-                                <label class="chip-label">
-                                    <input type="checkbox" value="医疗">
-                                    <span class="chip">医疗</span>
-                                </label>
-                                <label class="chip-label">
-                                    <input type="checkbox" value="工程">
-                                    <span class="chip">工程</span>
-                                </label>
-                                <label class="chip-label">
-                                    <input type="checkbox" value="教育">
-                                    <span class="chip">教育</span>
-                                </label>
-                                <label class="chip-label">
-                                    <input type="checkbox" value="运营">
-                                    <span class="chip">运营</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="bioInput">自我介绍</label>
-                            <textarea id="bioInput" class="form-textarea" rows="6">我是一名资深的金融和法律领域专家，拥有8年的跨境投资和合规审查经验。精通中英文，熟悉中美两国的法律法规体系。</textarea>
-                        </div>
-
-                        <button id="saveProfileBtn" class="btn-primary">保存资料</button>
+                <!-- Basic Information -->
+                <div class="form-card">
+                    <h2>基本信息</h2>
+                    <div class="form-group">
+                        <label for="nameInput">姓名 *</label>
+                        <input type="text" id="nameInput" value="" placeholder="请输入您的姓名" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="emailInput">邮箱 *</label>
+                        <input type="email" id="emailInput" value="" placeholder="your.email@example.com" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="phoneInput">手机号 *</label>
+                        <input type="tel" id="phoneInput" value="" placeholder="188-0000-0000" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="wechatInput">微信号</label>
+                        <input type="text" id="wechatInput" value="" placeholder="您的微信号" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="cityInput">所在城市 *</label>
+                        <input type="text" id="cityInput" value="" placeholder="例如：上海" class="form-input">
                     </div>
                 </div>
 
-                <!-- Right Column: Documents -->
-                <div class="profile-right">
-                    <div class="form-card">
-                        <h2>简历与文档</h2>
+                <!-- Education (Auto-filled) -->
+                <div class="form-card">
+                    <h2>教育背景 <span class="auto-badge">自动填充</span></h2>
+                    <div id="educationContainer">
+                        <div class="empty-state">
+                            <p>📚 上传简历后将自动填充教育信息</p>
+                        </div>
+                    </div>
+                    <button id="addEducationBtn" class="btn-secondary">+ 手动添加教育经历</button>
+                </div>
 
-                        <div class="upload-section">
-                            <label for="resumeUpload" class="upload-label">
-                                <div class="upload-box">
-                                    <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                                    </svg>
-                                    <span class="upload-text">上传简历（PDF）</span>
-                                    <input type="file" id="resumeUpload" accept=".pdf" class="upload-input">
-                                </div>
+                <!-- Work Experience (Auto-filled) -->
+                <div class="form-card">
+                    <h2>工作经历 <span class="auto-badge">自动填充</span></h2>
+                    <div id="experienceContainer">
+                        <div class="empty-state">
+                            <p>💼 上传简历后将自动填充工作经历</p>
+                        </div>
+                    </div>
+                    <button id="addExperienceBtn" class="btn-secondary">+ 手动添加工作经历</button>
+                </div>
+
+                <!-- Work Preferences -->
+                <div class="form-card">
+                    <h2>工作偏好</h2>
+                    <div class="form-group">
+                        <label for="workLocationInput">工作地点 / 时区 *</label>
+                        <input type="text" id="workLocationInput" value="" placeholder="例如：中国上海 (UTC+8)" class="form-input">
+                        <span class="field-hint">请注明您的工作地点和时区，便于安排协作时间</span>
+                    </div>
+                    <div class="form-group">
+                        <label>专业领域 *</label>
+                        <div class="domain-chips">
+                            <label class="chip-label">
+                                <input type="checkbox" value="法律">
+                                <span class="chip">法律</span>
                             </label>
-
-                            <div id="uploadedFiles" class="uploaded-files">
-                                <!-- Uploaded files will appear here -->
-                            </div>
-                        </div>
-
-                        <div class="profile-preview">
-                            <h3>资料预览</h3>
-                            <div class="preview-item">
-                                <strong>姓名：</strong><span id="previewName">罗杰</span>
-                            </div>
-                            <div class="preview-item">
-                                <strong>邮箱：</strong><span id="previewEmail">luojie@example.com</span>
-                            </div>
-                            <div class="preview-item">
-                                <strong>城市：</strong><span id="previewCity">上海</span>
-                            </div>
-                            <div class="preview-item">
-                                <strong>领域：</strong><span id="previewDomains">法律, 金融</span>
-                            </div>
+                            <label class="chip-label">
+                                <input type="checkbox" value="金融">
+                                <span class="chip">金融</span>
+                            </label>
+                            <label class="chip-label">
+                                <input type="checkbox" value="医疗">
+                                <span class="chip">医疗</span>
+                            </label>
+                            <label class="chip-label">
+                                <input type="checkbox" value="工程">
+                                <span class="chip">工程</span>
+                            </label>
+                            <label class="chip-label">
+                                <input type="checkbox" value="教育">
+                                <span class="chip">教育</span>
+                            </label>
+                            <label class="chip-label">
+                                <input type="checkbox" value="运营">
+                                <span class="chip">运营</span>
+                            </label>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label for="expectedPayInput">期望时薪 (¥/小时) *</label>
+                        <input type="number" id="expectedPayInput" value="" placeholder="例如：80" class="form-input" min="0" step="5">
+                        <span class="field-hint">根据您的经验和技能设定合理的时薪范围</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="availabilityInput">每周可工作时长 *</label>
+                        <select id="availabilityInput" class="form-input">
+                            <option value="">请选择</option>
+                            <option value="10">10小时以下</option>
+                            <option value="10-20">10-20小时</option>
+                            <option value="20-30">20-30小时</option>
+                            <option value="30-40">30-40小时</option>
+                            <option value="40+">40小时以上（全职）</option>
+                        </select>
+                    </div>
                 </div>
+
+                <!-- Account Settings -->
+                <div class="form-card">
+                    <h2>账户设置</h2>
+                    <div class="form-group">
+                        <label for="usernameInput">用户名 / 登录名 *</label>
+                        <input type="text" id="usernameInput" value="" placeholder="设置您的登录用户名" class="form-input">
+                        <span class="field-hint">用于登录系统，设置后不可更改</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="passwordInput">密码 *</label>
+                        <input type="password" id="passwordInput" value="" placeholder="至少8位字符" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPasswordInput">确认密码 *</label>
+                        <input type="password" id="confirmPasswordInput" value="" placeholder="再次输入密码" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="securityQuestionInput">安全问题</label>
+                        <select id="securityQuestionInput" class="form-input">
+                            <option value="">选择安全问题</option>
+                            <option value="pet">您的第一只宠物叫什么名字？</option>
+                            <option value="city">您出生在哪个城市？</option>
+                            <option value="school">您小学的名字是？</option>
+                            <option value="teacher">您最喜欢的老师姓什么？</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="securityAnswerInput">安全问题答案</label>
+                        <input type="text" id="securityAnswerInput" value="" placeholder="用于找回密码" class="form-input">
+                    </div>
+                </div>
+
+                <!-- Self Introduction -->
+                <div class="form-card full-width">
+                    <h2>自我介绍</h2>
+                    <div class="form-group">
+                        <label for="bioInput">个人简介 *</label>
+                        <textarea id="bioInput" class="form-textarea" rows="6" placeholder="简要介绍您的专业背景、技能特长和工作经验..."></textarea>
+                        <span class="field-hint">建议150-300字，突出您的核心优势</span>
+                    </div>
+                </div>
+
             </div>
+
+            <!-- Save Button -->
+            <div class="save-section">
+                <button id="saveProfileBtn" class="btn-primary-large">💾 保存所有资料</button>
+                <p class="save-hint">* 标记为必填项</p>
+            </div>
+
         </section>
 
         <!-- VIEW 3: Application Tracker -->

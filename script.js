@@ -805,58 +805,191 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ========================================
-// Profile Form Logic
+// Profile Form Logic with Auto-Fill
 // ========================================
 const saveProfileBtn = document.getElementById('saveProfileBtn');
 const successBanner = document.getElementById('successBanner');
-const nameInput = document.getElementById('nameInput');
-const emailInput = document.getElementById('emailInput');
-const cityInput = document.getElementById('cityInput');
-const domainCheckboxes = document.querySelectorAll('.domain-chips input[type="checkbox"]');
-
-function updateProfilePreview() {
-    document.getElementById('previewName').textContent = nameInput.value || '未填写';
-    document.getElementById('previewEmail').textContent = emailInput.value || '未填写';
-    document.getElementById('previewCity').textContent = cityInput.value || '未填写';
-
-    const selectedDomains = Array.from(domainCheckboxes)
-        .filter(cb => cb.checked)
-        .map(cb => cb.value);
-
-    document.getElementById('previewDomains').textContent =
-        selectedDomains.length > 0 ? selectedDomains.join(', ') : '未选择';
-}
-
-nameInput.addEventListener('input', updateProfilePreview);
-emailInput.addEventListener('input', updateProfilePreview);
-cityInput.addEventListener('input', updateProfilePreview);
-domainCheckboxes.forEach(cb => cb.addEventListener('change', updateProfilePreview));
-
-saveProfileBtn.addEventListener('click', () => {
-    successBanner.classList.remove('hidden');
-    setTimeout(() => successBanner.classList.add('hidden'), 3000);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-});
-
-// ========================================
-// File Upload Logic
-// ========================================
 const resumeUpload = document.getElementById('resumeUpload');
 const uploadedFiles = document.getElementById('uploadedFiles');
+const autoFillNotice = document.getElementById('autoFillNotice');
+const educationContainer = document.getElementById('educationContainer');
+const experienceContainer = document.getElementById('experienceContainer');
 
+// Mock data for auto-fill (simulates resume parsing)
+const mockResumeData = {
+    name: "张伟",
+    email: "zhangwei@email.com",
+    phone: "138-0000-8888",
+    city: "北京",
+    education: [
+        {
+            school: "清华大学",
+            degree: "计算机科学与技术",
+            level: "本科",
+            gpa: "3.8/4.0",
+            startYear: "2015",
+            endYear: "2019"
+        },
+        {
+            school: "斯坦福大学",
+            degree: "人工智能",
+            level: "硕士",
+            gpa: "3.9/4.0",
+            startYear: "2019",
+            endYear: "2021"
+        }
+    ],
+    experience: [
+        {
+            company: "腾讯科技",
+            position: "高级软件工程师",
+            location: "深圳",
+            startDate: "2021年6月",
+            endDate: "2023年8月",
+            responsibilities: [
+                "负责微信支付后端系统的开发和维护",
+                "优化支付流程，提升系统性能30%",
+                "带领5人团队完成多个核心功能模块"
+            ]
+        },
+        {
+            company: "字节跳动",
+            position: "AI工程师",
+            location: "北京",
+            startDate: "2023年9月",
+            endDate: "至今",
+            responsibilities: [
+                "参与大语言模型训练和优化工作",
+                "开发AI数据标注和评估工具",
+                "协助改进推荐算法准确率"
+            ]
+        }
+    ]
+};
+
+// Resume upload and auto-fill
 resumeUpload.addEventListener('change', (e) => {
     const files = e.target.files;
     if (files.length > 0) {
         const file = files[0];
-        const fileItem = document.createElement('div');
-        fileItem.className = 'file-item';
-        fileItem.innerHTML = `
-            <span class="file-name">📄 ${file.name}</span>
-            <span class="file-badge">仅示意</span>
+
+        // Show uploaded file
+        uploadedFiles.innerHTML = `
+            <div class="file-item">
+                <span class="file-name">📄 ${file.name}</span>
+                <span class="file-badge">已上传</span>
+            </div>
         `;
-        uploadedFiles.appendChild(fileItem);
+
+        // Simulate resume parsing with delay
+        setTimeout(() => {
+            autoFillProfile(mockResumeData);
+            autoFillNotice.classList.remove('hidden');
+            setTimeout(() => autoFillNotice.classList.add('hidden'), 5000);
+        }, 1000);
+
         resumeUpload.value = '';
     }
+});
+
+// Auto-fill profile function
+function autoFillProfile(data) {
+    // Fill basic info
+    document.getElementById('nameInput').value = data.name;
+    document.getElementById('emailInput').value = data.email;
+    document.getElementById('phoneInput').value = data.phone;
+    document.getElementById('cityInput').value = data.city;
+
+    // Fill education
+    renderEducation(data.education);
+
+    // Fill work experience
+    renderExperience(data.experience);
+}
+
+// Render education section
+function renderEducation(educationList) {
+    educationContainer.innerHTML = '';
+    educationList.forEach((edu, index) => {
+        const eduItem = document.createElement('div');
+        eduItem.className = 'education-item';
+        eduItem.innerHTML = `
+            <button class="remove-btn" onclick="removeEducation(${index})">删除</button>
+            <h4>${edu.school}</h4>
+            <div class="meta"><strong>学位：</strong>${edu.level} - ${edu.degree}</div>
+            <div class="meta"><strong>GPA：</strong>${edu.gpa}</div>
+            <div class="meta"><strong>时间：</strong>${edu.startYear} - ${edu.endYear}</div>
+        `;
+        educationContainer.appendChild(eduItem);
+    });
+}
+
+// Render experience section
+function renderExperience(experienceList) {
+    experienceContainer.innerHTML = '';
+    experienceList.forEach((exp, index) => {
+        const expItem = document.createElement('div');
+        expItem.className = 'experience-item';
+
+        const responsibilitiesHTML = exp.responsibilities.map(r =>
+            `<li>${r}</li>`
+        ).join('');
+
+        expItem.innerHTML = `
+            <button class="remove-btn" onclick="removeExperience(${index})">删除</button>
+            <h4>${exp.position}</h4>
+            <div class="meta"><strong>公司：</strong>${exp.company}</div>
+            <div class="meta"><strong>地点：</strong>${exp.location}</div>
+            <div class="meta"><strong>时间：</strong>${exp.startDate} - ${exp.endDate}</div>
+            <ul class="responsibilities">${responsibilitiesHTML}</ul>
+        `;
+        experienceContainer.appendChild(expItem);
+    });
+}
+
+// Global functions for removing items
+window.removeEducation = (index) => {
+    mockResumeData.education.splice(index, 1);
+    renderEducation(mockResumeData.education);
+};
+
+window.removeExperience = (index) => {
+    mockResumeData.experience.splice(index, 1);
+    renderExperience(mockResumeData.experience);
+};
+
+// Manual add buttons
+document.getElementById('addEducationBtn').addEventListener('click', () => {
+    const newEdu = {
+        school: "学校名称",
+        degree: "专业",
+        level: "学位",
+        gpa: "GPA",
+        startYear: "开始年份",
+        endYear: "结束年份"
+    };
+    mockResumeData.education.push(newEdu);
+    renderEducation(mockResumeData.education);
+});
+
+document.getElementById('addExperienceBtn').addEventListener('click', () => {
+    const newExp = {
+        company: "公司名称",
+        position: "职位",
+        location: "地点",
+        startDate: "开始时间",
+        endDate: "结束时间",
+        responsibilities: ["工作职责1", "工作职责2"]
+    };
+    mockResumeData.experience.push(newExp);
+    renderExperience(mockResumeData.experience);
+});
+
+// Save profile
+saveProfileBtn.addEventListener('click', () => {
+    successBanner.classList.remove('hidden');
+    setTimeout(() => successBanner.classList.add('hidden'), 3000);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
 // ========================================
